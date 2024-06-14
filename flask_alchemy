@@ -1,0 +1,120 @@
+#task 1
+
+from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
+
+app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://root:your_password@localhost/fitness_center_db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
+
+
+#task 2
+
+from flask import request, jsonify
+
+# Route to add a new member
+@app.route('/members', methods=['POST'])
+def add_member():
+    data = request.json
+    new_member = Member(name=data['name'], email=data['email'])  # Assuming 'name' and 'email' are required fields
+    db.session.add(new_member)
+    db.session.commit()
+    return jsonify({'message': 'Member added successfully', 'id': new_member.id}), 201
+
+# Route to retrieve all members
+@app.route('/members', methods=['GET'])
+def get_members():
+    members = Member.query.all()
+    return jsonify([member.serialize() for member in members])
+
+# Route to retrieve a specific member
+@app.route('/members/<int:member_id>', methods=['GET'])
+def get_member(member_id):
+    member = Member.query.get_or_404(member_id)
+    return jsonify(member.serialize())
+
+# Route to update a member
+@app.route('/members/<int:member_id>', methods=['PUT'])
+def update_member(member_id):
+    member = Member.query.get_or_404(member_id)
+    data = request.json
+    member.name = data.get('name', member.name)
+    member.email = data.get('email', member.email)
+    db.session.commit()
+    return jsonify({'message': 'Member updated successfully'})
+
+# Route to delete a member
+@app.route('/members/<int:member_id>', methods=['DELETE'])
+def delete_member(member_id):
+    member = Member.query.get_or_404(member_id)
+    db.session.delete(member)
+    db.session.commit()
+    return jsonify({'message': 'Member deleted successfully'})
+
+# Error handler for 404 Not Found
+@app.errorhandler(404)
+def not_found_error(error):
+    return jsonify({'error': 'Not found'}), 404
+
+# Error handler for 400 Bad Request
+@app.errorhandler(400)
+def bad_request_error(error):
+    return jsonify({'error': 'Bad request'}), 400
+
+# Error handler for 500 Internal Server Error
+@app.errorhandler(500)
+def internal_error(error):
+    db.session.rollback()
+    return jsonify({'error': 'Internal server error'}), 500
+
+
+#task 3
+
+from flask import request
+
+# Route to schedule a workout session for a member
+@app.route('/workout-sessions', methods=['POST'])
+def schedule_workout_session():
+    data = request.json
+    new_session = WorkoutSession(member_id=data['member_id'], date=data['date'], duration_minutes=data['duration_minutes'])
+    db.session.add(new_session)
+    db.session.commit()
+    return jsonify({'message': 'Workout session scheduled successfully', 'id': new_session.id}), 201
+
+# Route to update a workout session
+@app.route('/workout-sessions/<int:session_id>', methods=['PUT'])
+def update_workout_session(session_id):
+    session = WorkoutSession.query.get_or_404(session_id)
+    data = request.json
+    session.date = data.get('date', session.date)
+    session.duration_minutes = data.get('duration_minutes', session.duration_minutes)
+    db.session.commit()
+    return jsonify({'message': 'Workout session updated successfully'})
+
+# Route to view all workout sessions for a specific member
+@app.route('/members/<int:member_id>/workout-sessions', methods=['GET'])
+def get_workout_sessions(member_id):
+    sessions = WorkoutSession.query.filter_by(member_id=member_id).all()
+    return jsonify([session.serialize() for session in sessions])
+
+# Error handler for 404 Not Found
+@app.errorhandler(404)
+def not_found_error(error):
+    return jsonify({'error': 'Not found'}), 404
+
+# Error handler for 400 Bad Request
+@app.errorhandler(400)
+def bad_request_error(error):
+    return jsonify({'error': 'Bad request'}), 400
+
+# Error handler for 500 Internal Server Error
+@app.errorhandler(500)
+def internal_error(error):
+    db.session.rollback()
+    return jsonify({'error': 'Internal server error'}), 500
+
+
+
+
+
